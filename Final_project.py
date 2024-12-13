@@ -192,3 +192,81 @@ def plot_crime_counts():
     plt.title("Total Crimes Per NFL Team")
     plt.xticks(rotation=45)
     plt.show()
+
+
+# Function to plot the distribution of crimes by team as a pie chart
+def plot_crime_distribution_by_team():
+    conn = sqlite3.connect("sports_crime.db")
+    cursor = conn.cursor()
+
+
+    # Query to fetch summed crime counts per team
+    cursor.execute('''
+        SELECT NFL_Data.team_name, SUM(Crime_Data.crime_count) AS total_crime
+        FROM NFL_Data
+        JOIN Crime_Data ON NFL_Data.id = Crime_Data.nfl_team_id
+        GROUP BY NFL_Data.team_name
+    ''')
+    data = cursor.fetchall()
+    conn.close()
+
+
+    # Create a pie chart
+    df = pd.DataFrame(data, columns=["Team Name", "Total Crime"])
+    plt.figure(figsize=(14, 14))  # Increase pie chart size
+    plt.pie(
+        df["Total Crime"],
+        labels=df["Team Name"],
+        autopct='%1.1f%%',
+        startangle=140,
+        textprops={'fontsize': 7}  # Adjust font size for readability
+    )
+    plt.title("Crime Distribution by Team")
+    plt.show()
+
+
+# Function to plot team performance vs. crime count
+def plot_team_performance_vs_crimes():
+    conn = sqlite3.connect("sports_crime.db")
+    cursor = conn.cursor()
+
+
+    # Query to fetch wins and summed crime counts per team
+    cursor.execute('''
+        SELECT NFL_Data.team_name, NFL_Data.wins, SUM(Crime_Data.crime_count) AS total_crime
+        FROM NFL_Data
+        JOIN Crime_Data ON NFL_Data.id = Crime_Data.nfl_team_id
+        GROUP BY NFL_Data.team_name
+    ''')
+    data = cursor.fetchall()
+    conn.close()
+
+
+    # Create a scatter plot
+    df = pd.DataFrame(data, columns=["Team Name", "Wins", "Total Crime"])
+    plt.figure(figsize=(12, 8))  # Increase figure size for better spacing
+    scatter = sns.scatterplot(
+        x="Wins",
+        y="Total Crime",
+        data=df,
+        hue="Team Name",
+        palette="viridis",
+        s=100
+    )
+
+
+    # Adjust legend placement and text
+    scatter.legend(
+        bbox_to_anchor=(1.05, 1),  # Position the legend to the right of the plot
+        loc='upper left',
+        title="Team Names",  # Add a legend title
+        borderaxespad=0,
+        fontsize=9  # Adjust font size for readability
+    )
+
+
+    plt.title("Team Performance vs. Total Crime")
+    plt.xlabel("Wins")
+    plt.ylabel("Total Crime")
+    plt.tight_layout()  # Ensure everything fits without overlapping
+    plt.show()
