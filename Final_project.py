@@ -44,3 +44,41 @@ def setup_database():
 
 
 setup_database()
+
+# Function to fetch and store NFL data from an external API
+def fetch_and_store_nfl_data():
+    conn = sqlite3.connect("sports_crime.db")
+    cursor = conn.cursor()
+
+
+    # API details for fetching NFL data
+    api_key = "f105b43470724d57820780e9a7a809e7"
+    url = "https://api.sportsdata.io/v3/nfl/scores/json/Standings/2023"
+    headers = {"Ocp-Apim-Subscription-Key": api_key}
+
+
+    response = requests.get(url, headers=headers)
+    if response.status_code == 200:
+        nfl_data = response.json()
+        row_count = 0
+        for team in nfl_data[:25]:  # Limit to 25 items to comply with project requirements
+            cursor.execute('''
+                INSERT INTO NFL_Data (team_name, wins, losses, points_scored)
+                VALUES (?, ?, ?, ?)
+            ''', (
+                team["Team"],
+                team["Wins"],
+                team["Losses"],
+                team.get("PointsScored", 0)  # Default to 0 if points scored is not available
+            ))
+            row_count += 1
+        print(f"Inserted {row_count} rows of NFL data.")
+    else:
+        print(f"Failed to fetch NFL data: {response.status_code}")
+
+
+    conn.commit()
+    conn.close()
+
+
+# Function to fetch and store crime data from an external API
