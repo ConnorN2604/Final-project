@@ -142,3 +142,171 @@ def fetch_and_store_crime_data():
     finally:
         conn.commit()
         conn.close()
+
+# Function to calculate and write summary statistics to a text file
+def calculate_and_write_summary():
+    conn = sqlite3.connect("sports_crime.db")
+    cursor = conn.cursor()
+
+
+    # Query to join NFL data with crime data and calculate total crime counts
+    cursor.execute('''
+        SELECT NFL_Data.team_name, NFL_Data.wins, NFL_Data.losses, SUM(Crime_Data.crime_count) AS total_crime
+        FROM NFL_Data
+        JOIN Crime_Data ON NFL_Data.id = Crime_Data.nfl_team_id
+        GROUP BY NFL_Data.team_name, NFL_Data.wins, NFL_Data.losses
+    ''')
+
+
+    results = cursor.fetchall()
+    conn.close()
+
+
+    # Write the results to a text file
+    with open("crime_summary.txt", "w") as file:
+        for row in results:
+            file.write(f"Team: {row[0]}, Wins: {row[1]}, Losses: {row[2]}, Total Crime Count: {row[3]}\n")
+
+
+# Function to plot the total number of crimes by NFL team
+def plot_crime_counts():
+    conn = sqlite3.connect("sports_crime.db")
+    cursor = conn.cursor()
+
+
+    # Query to fetch summed crime counts per team
+    cursor.execute('''
+        SELECT NFL_Data.team_name, SUM(Crime_Data.crime_count) AS total_crime
+        FROM NFL_Data
+        JOIN Crime_Data ON NFL_Data.id = Crime_Data.nfl_team_id
+        GROUP BY NFL_Data.team_name
+    ''')
+    data = cursor.fetchall()
+    conn.close()
+
+
+    # Create a bar chart
+    df = pd.DataFrame(data, columns=["Team Name", "Total Crime"])
+    plt.figure(figsize=(12, 6))
+    sns.barplot(x="Team Name", y="Total Crime", data=df)
+    plt.title("Total Crimes Per NFL Team")
+    plt.xticks(rotation=45)
+    plt.show()
+# Function to plot the distribution of crimes by team as a pie chart
+def plot_crime_distribution_by_team():
+    conn = sqlite3.connect("sports_crime.db")
+    cursor = conn.cursor()
+    # Query to fetch summed crime counts per team
+    cursor.execute('''
+        SELECT NFL_Data.team_name, SUM(Crime_Data.crime_count) AS total_crime
+        FROM NFL_Data
+        JOIN Crime_Data ON NFL_Data.id = Crime_Data.nfl_team_id
+        GROUP BY NFL_Data.team_name
+    ''')
+    data = cursor.fetchall()
+    conn.close()
+    # Create a pie chart
+    df = pd.DataFrame(data, columns=["Team Name", "Total Crime"])
+    plt.figure(figsize=(14, 14))  # Increase pie chart size
+    plt.pie(
+        df["Total Crime"],
+        labels=df["Team Name"],
+        autopct='%1.1f%%',
+        startangle=140,
+        textprops={'fontsize': 7}  # Adjust font size for readability
+    )
+    plt.title("Crime Distribution by Team")
+    plt.show()
+# Function to plot team performance vs. crime count
+def plot_team_performance_vs_crimes():
+    conn = sqlite3.connect("sports_crime.db")
+    cursor = conn.cursor()
+    # Query to fetch wins and summed crime counts per team
+    cursor.execute('''
+        SELECT NFL_Data.team_name, NFL_Data.wins, SUM(Crime_Data.crime_count) AS total_crime
+        FROM NFL_Data
+        JOIN Crime_Data ON NFL_Data.id = Crime_Data.nfl_team_id
+        GROUP BY NFL_Data.team_name
+    ''')
+    data = cursor.fetchall()
+    conn.close()
+    # Create a scatter plot
+    df = pd.DataFrame(data, columns=["Team Name", "Wins", "Total Crime"])
+    plt.figure(figsize=(12, 8))  # Increase figure size for better spacing
+    scatter = sns.scatterplot(
+        x="Wins",
+        y="Total Crime",
+        data=df,
+        hue="Team Name",
+        palette="viridis",
+        s=100
+    )
+    # Adjust legend placement and text
+    scatter.legend(
+        bbox_to_anchor=(1.05, 1),  # Position the legend to the right of the plot
+        loc='upper left',
+        title="Team Names",  # Add a legend title
+        borderaxespad=0,
+        fontsize=9  # Adjust font size for readability
+    )
+    plt.title("Team Performance vs. Total Crime")
+    plt.xlabel("Wins")
+    plt.ylabel("Total Crime")
+    plt.tight_layout()  # Ensure everything fits without overlapping
+    plt.show()
+
+    
+# Function to plot the distribution of crime counts by team losses
+def plot_crime_distribution_by_losses():
+    conn = sqlite3.connect("sports_crime.db")
+    cursor = conn.cursor()
+
+
+    # Query to fetch losses and summed crime counts per team
+    cursor.execute('''
+        SELECT NFL_Data.losses, SUM(Crime_Data.crime_count) AS total_crime
+        FROM NFL_Data
+        JOIN Crime_Data ON NFL_Data.id = Crime_Data.nfl_team_id
+        GROUP BY NFL_Data.losses
+    ''')
+    data = cursor.fetchall()
+    conn.close()
+
+
+    # Create a histogram
+    df = pd.DataFrame(data, columns=["Losses", "Total Crime"])
+    plt.figure(figsize=(10, 6))
+    sns.histplot(df, x="Losses", weights="Total Crime", bins=10, kde=False, color="purple")
+    plt.title("Distribution of Crime Counts by Team Losses")
+    plt.xlabel("Number of Losses")
+    plt.ylabel("Total Crime")
+    plt.show()
+
+
+# Main function to run all processes
+def main():
+    # Gather data
+    fetch_and_store_nfl_data()
+    fetch_and_store_crime_data()
+
+
+    # Process data
+    calculate_and_write_summary()
+
+
+    # Visualize data
+    plot_crime_counts()
+    plot_crime_distribution_by_team()
+    plot_team_performance_vs_crimes()
+    plot_crime_distribution_by_losses()
+
+
+if __name__ == "__main__":
+    main()
+
+
+
+
+
+
+
