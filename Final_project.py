@@ -82,3 +82,63 @@ def fetch_and_store_nfl_data():
 
 
 # Function to fetch and store crime data from an external API
+def fetch_and_store_crime_data():
+    conn = sqlite3.connect("sports_crime.db")
+    cursor = conn.cursor()
+
+
+    # API details for fetching crime data
+    api_key = "iiHnOKfno2Mgkt5AynpvPpUQTEyxE77jo1RU8PIv"
+    url = "https://api.usa.gov/crime/fbi/cde/arrest/national/all"
+    params = {
+        "type": "counts",
+        "from": "01-2021",
+        "to": "12-2023",
+        "API_KEY": api_key
+    }
+    headers = {"accept": "application/json"}
+
+
+    try:
+        response = requests.get(url, headers=headers, params=params, timeout=10)
+        response.raise_for_status()  # Raise HTTPError for bad responses
+        crime_data = response.json()
+
+
+        # Extract and process crime data
+        actuals = crime_data.get("actuals", {}).get("United States Arrests", {})
+        row_count = 0
+        for date, count in list(actuals.items())[:25]:  # Limit to 25 items
+            try:
+                # Parse and validate the date format
+                crime_date = pd.to_datetime(date, format="%m-%Y", errors="coerce")
+                if pd.isna(crime_date):
+                    print(f"Skipping invalid date: {date}")
+                    continue
+                crime_date = crime_date.strftime("%Y-%m-%d")
+            except ValueError:
+                print(f"Skipping invalid date: {date}")
+                continue
+
+
+            nfl_team_id = random.randint(1, 25)  # Randomly map crime data to an NFL team
+            crime_type = "General Crime"  # Placeholder for crime type
+            time = "00:00:00"  # Placeholder for time
+
+
+            # Insert crime data into the database, including crime count
+            cursor.execute('''
+                INSERT INTO Crime_Data (nfl_team_id, crime_type, date, time, crime_count)
+                VALUES (?, ?, ?, ?, ?)
+            ''', (nfl_team_id, crime_type, crime_date, time, count))
+            row_count += 1
+        print(f"Inserted {row_count} rows of crime data.")
+
+
+    except requests.exceptions.RequestException as e:
+        print(f"Error: Request failed - {e}")
+    except ValueError as e:
+        print(f"Error: JSON parsing failed - {e}")
+    finally:
+        conn.commit()
+        conn.close()
