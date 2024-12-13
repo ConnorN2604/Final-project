@@ -142,3 +142,53 @@ def fetch_and_store_crime_data():
     finally:
         conn.commit()
         conn.close()
+
+# Function to calculate and write summary statistics to a text file
+def calculate_and_write_summary():
+    conn = sqlite3.connect("sports_crime.db")
+    cursor = conn.cursor()
+
+
+    # Query to join NFL data with crime data and calculate total crime counts
+    cursor.execute('''
+        SELECT NFL_Data.team_name, NFL_Data.wins, NFL_Data.losses, SUM(Crime_Data.crime_count) AS total_crime
+        FROM NFL_Data
+        JOIN Crime_Data ON NFL_Data.id = Crime_Data.nfl_team_id
+        GROUP BY NFL_Data.team_name, NFL_Data.wins, NFL_Data.losses
+    ''')
+
+
+    results = cursor.fetchall()
+    conn.close()
+
+
+    # Write the results to a text file
+    with open("crime_summary.txt", "w") as file:
+        for row in results:
+            file.write(f"Team: {row[0]}, Wins: {row[1]}, Losses: {row[2]}, Total Crime Count: {row[3]}\n")
+
+
+# Function to plot the total number of crimes by NFL team
+def plot_crime_counts():
+    conn = sqlite3.connect("sports_crime.db")
+    cursor = conn.cursor()
+
+
+    # Query to fetch summed crime counts per team
+    cursor.execute('''
+        SELECT NFL_Data.team_name, SUM(Crime_Data.crime_count) AS total_crime
+        FROM NFL_Data
+        JOIN Crime_Data ON NFL_Data.id = Crime_Data.nfl_team_id
+        GROUP BY NFL_Data.team_name
+    ''')
+    data = cursor.fetchall()
+    conn.close()
+
+
+    # Create a bar chart
+    df = pd.DataFrame(data, columns=["Team Name", "Total Crime"])
+    plt.figure(figsize=(12, 6))
+    sns.barplot(x="Team Name", y="Total Crime", data=df)
+    plt.title("Total Crimes Per NFL Team")
+    plt.xticks(rotation=45)
+    plt.show()
